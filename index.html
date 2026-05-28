@@ -3,34 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <title>Invoice</title>
-   <style>
+  <style>
     /* Basic Layout */
-    body { font-family: sans-serif; padding: 20px; color: #333; }
+    body { font-family: Arial, sans-serif; padding: 20px; color: #333; }
     .container { max-width: 800px; margin: auto; border: 1px solid #ddd; padding: 30px; }
     
-    /* Clean up input boxes for screen view */
-    input, textarea { border: 1px solid #ccc; padding: 5px; width: 90%; }
+    /* General Input Styling */
+    input, textarea { border: 1px solid #ccc; padding: 5px; width: 95%; font-family: inherit; }
 
-    /* PRINT STYLES - This fixes your issue */
+    /* PRINT STYLES */
     @media print {
+        @page { size: A4; margin: 15mm; }
         body { padding: 0; }
         .container { border: none; width: 100%; padding: 0; }
         .no-print { display: none; }
         
-        /* Turn inputs into plain text during print */
-        input, textarea { border: none; background: transparent; outline: none; }
+        /* Remove borders and backgrounds for printing */
+        input, textarea { 
+            border: none !important; 
+            background: transparent !important; 
+            padding: 0 !important;
+            margin: 0 !important;
+            resize: none;
+            overflow: hidden;
+            font-size: 14px;
+        }
         
-        /* Prevent content from overflowing/cutting off */
-        .container { overflow: visible; }
-        
-        /* Ensure table doesn't break weirdly */
-        table { page-break-inside: auto; }
-        tr { page-break-inside: avoid; page-break-after: auto; }
+        /* Align text specifically */
+        .details-grid { display: flex !important; justify-content: space-between !important; }
+        .details-grid > div { width: 48%; }
     }
 
+    /* Layout Styling */
     .header-section { display: flex; justify-content: space-between; margin-bottom: 30px; }
     .logo { max-width: 150px; }
-    .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+    .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 20px; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
     th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
     .totals { width: 300px; margin-left: auto; }
