@@ -129,9 +129,9 @@
   .decl-title{font-weight:bold; text-decoration:underline; margin:6px 0 2px;}
   .decl-text{font-size:10.5px; color:#333; white-space:pre-wrap;}
   table.sig-grid{width:100%; border-collapse:collapse;}
-  table.sig-grid td{border:1px solid #000; border-top:none; padding:24px 10px 10px; vertical-align:bottom; font-size:11.5px; height:70px;}
+  table.sig-grid td{border:1px solid #000; border-top:none; padding:14px 10px 10px; vertical-align:bottom; font-size:11.5px;}
   table.sig-grid td.right{text-align:right;}
-  .for-company{font-weight:bold; margin-bottom:34px;}
+  .for-company{font-weight:bold; margin-bottom:6px;}
   .footer-note{text-align:center; font-size:10.5px; margin-top:10px; color:#333;}
 
   @media print{
@@ -149,8 +149,8 @@
     table.hsn-table th, table.hsn-table td{padding:3px 4px; font-size:9px;}
     .tax-words-row{padding:3px 6px;}
     table.bottom-grid td{padding:4px 8px; font-size:9.5px;}
-    table.sig-grid td{height:36px; padding:10px 8px 4px;}
-    .for-company{margin-bottom:16px;}
+    table.sig-grid td{padding:8px 8px 4px;}
+    .for-company{margin-bottom:4px;}
     .footer-note{margin-top:4px; font-size:9px;}
   }
 </style>
@@ -266,8 +266,9 @@
         </div>
 
         <h3>Items</h3>
+        <p style="color:#666; font-size:11.5px; margin:-4px 0 6px;">Normally fill in Rate and the totals calculate forward. If you only know the vendor's total (incl. GST) for a line, type it into <b>Total (incl. GST)</b> instead — Rate will be back-calculated automatically.</p>
         <table class="item-table">
-          <thead><tr><th style="width:16%">Product</th><th>Description</th><th style="width:9%">HSN/SAC</th><th style="width:7%">GST %</th><th style="width:6%">Qty</th><th style="width:7%">Unit</th><th style="width:9%">Rate</th><th style="width:7%">Disc %</th><th style="width:10%">Amount</th><th style="width:3%"></th></tr></thead>
+          <thead><tr><th style="width:14%">Product</th><th>Description</th><th style="width:8%">HSN/SAC</th><th style="width:6%">GST %</th><th style="width:5%">Qty</th><th style="width:6%">Unit</th><th style="width:8%">Rate</th><th style="width:6%">Disc %</th><th style="width:10%">Total (incl. GST)</th><th style="width:9%">Taxable Amt</th><th style="width:3%"></th></tr></thead>
           <tbody id="f_itemsBody"></tbody>
         </table>
         <button type="button" class="add-row-btn" id="addItemBtn">+ Add line item</button>
@@ -339,7 +340,7 @@
         <input type="hidden" id="p_id">
         <div class="form-field"><label>Name</label><input id="p_name" required></div>
         <div class="form-field"><label>HSN/SAC</label><input id="p_hsn"></div>
-        <div class="form-field"><label>Rate</label><input type="number" step="0.01" id="p_rate"></div>
+        <div class="form-field"><label>Rate</label><input type="number" step="0.001" id="p_rate"></div>
         <div class="form-field"><label>GST %</label><input type="number" step="0.1" id="p_gstRate" value="18"></div>
         <div class="form-field"><label>Unit</label><input id="p_unit" value="Nos"></div>
         <div class="form-actions">
@@ -362,6 +363,11 @@
           <label>Logo</label>
           <img id="companyLogoPreview" class="logo-preview hidden">
           <input type="file" id="companyLogoInput" accept="image/*">
+        </div>
+        <div class="form-field logo-field">
+          <label>Company seal</label>
+          <img id="companySealPreview" class="logo-preview hidden">
+          <input type="file" id="companySealInput" accept="image/*">
         </div>
         <div class="form-field"><label>Company name</label><input id="co_bizName"></div>
         <div class="form-field full"><label>Address</label><textarea rows="2" id="co_bizAddress"></textarea></div>
@@ -513,12 +519,14 @@ function showInvoicePanel(which){
 // Company profile
 // ---------------------------------------------------------------
 let pendingLogoDataUrl = null;
+let pendingSealDataUrl = null;
 
 async function loadCompanyProfile(){
   const { data, error } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
   if(error){ console.error('Could not load company profile', error); return; }
   companyProfile = data;
   pendingLogoDataUrl = data.logo_data_url || null;
+  pendingSealDataUrl = data.seal_data_url || null;
 
   const map = {
     co_bizName: 'biz_name', co_bizAddress: 'biz_address', co_bizGstin: 'biz_gstin', co_bizUdyam: 'biz_udyam',
@@ -530,9 +538,13 @@ async function loadCompanyProfile(){
   for(const [elId, field] of Object.entries(map)){
     document.getElementById(elId).value = data[field] || '';
   }
-  const preview = document.getElementById('companyLogoPreview');
-  if(data.logo_data_url){ preview.src = data.logo_data_url; preview.classList.remove('hidden'); }
-  else preview.classList.add('hidden');
+  const logoPreview = document.getElementById('companyLogoPreview');
+  if(data.logo_data_url){ logoPreview.src = data.logo_data_url; logoPreview.classList.remove('hidden'); }
+  else logoPreview.classList.add('hidden');
+
+  const sealPreview = document.getElementById('companySealPreview');
+  if(data.seal_data_url){ sealPreview.src = data.seal_data_url; sealPreview.classList.remove('hidden'); }
+  else sealPreview.classList.add('hidden');
 }
 
 function handleLogoUpload(e){
@@ -544,6 +556,20 @@ function handleLogoUpload(e){
     pendingLogoDataUrl = reader.result;
     const preview = document.getElementById('companyLogoPreview');
     preview.src = pendingLogoDataUrl;
+    preview.classList.remove('hidden');
+  };
+  reader.readAsDataURL(file);
+}
+
+function handleSealUpload(e){
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  if(file.size > 1.5 * 1024 * 1024){ alert('Please choose a seal image under 1.5MB.'); return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    pendingSealDataUrl = reader.result;
+    const preview = document.getElementById('companySealPreview');
+    preview.src = pendingSealDataUrl;
     preview.classList.remove('hidden');
   };
   reader.readAsDataURL(file);
@@ -567,7 +593,8 @@ async function handleCompanySubmit(e){
     bank_ifsc: document.getElementById('co_bankIfsc').value,
     jurisdiction_city: document.getElementById('co_jurisdiction').value,
     declaration: document.getElementById('co_declaration').value,
-    logo_data_url: pendingLogoDataUrl
+    logo_data_url: pendingLogoDataUrl,
+    seal_data_url: pendingSealDataUrl
   };
   const { error } = await supabaseClient.from('profiles').update(update).eq('id', currentUser.id);
   if(error){ alert('Could not save: ' + error.message); return; }
@@ -864,8 +891,9 @@ function addItemRow(item){
     <td><input class="f-gst" type="number" step="0.1" value="${item.gstRate}"></td>
     <td><input class="f-qty" type="number" step="1" value="${item.qty}"></td>
     <td><input class="f-unit" value="${escapeHtml(item.unit)}"></td>
-    <td><input class="f-rate" type="number" step="0.01" value="${item.rate}"></td>
+    <td><input class="f-rate" type="number" step="0.01" value="${item.rate}" title="Unit rate, excluding GST"></td>
     <td><input class="f-disc" type="number" step="0.1" value="${item.discPct}"></td>
+    <td><input class="f-gross" type="number" step="0.01" value="0" title="Type the vendor's total (incl. GST) to auto-calculate the Rate"></td>
     <td class="amount-cell">0.00</td>
     <td><button type="button" class="remove-btn">×</button></td>
   `;
@@ -880,11 +908,34 @@ function addItemRow(item){
     }
     recalcInvoiceForm();
   });
-  tr.querySelectorAll('input').forEach(inp => inp.addEventListener('input', recalcInvoiceForm));
+  // Every field except Gross drives the normal forward calculation (qty*rate -> taxable -> gross).
+  tr.querySelectorAll('input').forEach(inp => {
+    if(!inp.classList.contains('f-gross')) inp.addEventListener('input', recalcInvoiceForm);
+  });
+  // Gross works the other way: typing a known total (incl. GST) back-calculates the Rate.
+  tr.querySelector('.f-gross').addEventListener('input', () => {
+    reverseCalcRateFromGross(tr);
+    recalcInvoiceForm();
+  });
   tr.querySelector('.remove-btn').addEventListener('click', () => {
     if(document.querySelectorAll('#f_itemsBody tr').length > 1){ tr.remove(); recalcInvoiceForm(); }
   });
   document.getElementById('f_itemsBody').appendChild(tr);
+}
+
+// Given a known gross (total incl. GST) for a line, works backwards to the unit Rate —
+// useful when a vendor's bill only shows a total and you need to split it into
+// rate + GST yourself. Qty, GST% and Disc% are taken as already correct/known.
+function reverseCalcRateFromGross(tr){
+  const gross = Number(tr.querySelector('.f-gross').value) || 0;
+  const qty = Number(tr.querySelector('.f-qty').value) || 0;
+  const disc = Number(tr.querySelector('.f-disc').value) || 0;
+  const gst = Number(tr.querySelector('.f-gst').value) || 0;
+  const discFactor = 1 - (disc / 100);
+  const denom = qty * discFactor * (1 + gst / 100);
+  if(denom === 0) return;
+  const rate = gross / denom;
+  if(isFinite(rate)) tr.querySelector('.f-rate').value = rate.toFixed(2);
 }
 
 function getItemsFromForm(){
@@ -905,7 +956,16 @@ function recalcInvoiceForm(){
     const qty = Number(tr.querySelector('.f-qty').value) || 0;
     const rate = Number(tr.querySelector('.f-rate').value) || 0;
     const disc = Number(tr.querySelector('.f-disc').value) || 0;
-    tr.querySelector('.amount-cell').textContent = computeItemTaxable(qty, rate, disc).toFixed(2);
+    const gst = Number(tr.querySelector('.f-gst').value) || 0;
+    const taxable = computeItemTaxable(qty, rate, disc);
+    tr.querySelector('.amount-cell').textContent = taxable.toFixed(2);
+
+    // Keep the Gross field showing the current total-incl-GST — but never while
+    // the user is actively typing into it (that would fight their input).
+    const grossInput = tr.querySelector('.f-gross');
+    if(document.activeElement !== grossInput){
+      grossInput.value = (taxable * (1 + gst / 100)).toFixed(2);
+    }
   });
 
   const items = getItemsFromForm();
@@ -1216,7 +1276,11 @@ async function viewInvoice(id){
 
     <table class="sig-grid"><tbody><tr>
       <td style="width:50%">Customer's Seal and Signature</td>
-      <td style="width:50%" class="right"><div class="for-company">for ${escapeHtml(co.biz_name)}</div>Authorised Signatory</td>
+      <td style="width:50%" class="right">
+        <div class="for-company">for ${escapeHtml(co.biz_name)}</div>
+        ${co.seal_data_url ? `<img src="${co.seal_data_url}" alt="Seal" style="max-width:72px;max-height:72px;display:block;margin:2px 0 4px auto;">` : ''}
+        Authorised Signatory
+      </td>
     </tr></tbody></table>
 
     <div class="footer-note">
@@ -1259,6 +1323,7 @@ function wireStaticListeners(){
 
   document.getElementById('companyForm').addEventListener('submit', handleCompanySubmit);
   document.getElementById('companyLogoInput').addEventListener('change', handleLogoUpload);
+  document.getElementById('companySealInput').addEventListener('change', handleSealUpload);
 }
 
 boot();
